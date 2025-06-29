@@ -18,8 +18,9 @@ DEFAULT_FILENAME = "majorship.json"  # 🔁 change to your filename like "majors
 # === Gemini Prompt Builder ===
 def build_explanation_prompt(questions: list) -> str:
     return (
-        "Please add a short 'explanation' (atleast 100 characters below) field to each question object. "
-        "in the JSON array below. Respond with valid JSON only:\n\n"
+        "For each question object in the JSON array below, add a field called 'explanation'. "
+        "The explanation must be **very concise**, with **100 characters or fewer**. "
+        "Only return valid JSON with the added 'explanation' fields. No extra text.\n\n"
         f"{json.dumps(questions, indent=2)}"
     )
 
