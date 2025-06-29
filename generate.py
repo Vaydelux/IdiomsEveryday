@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+import telegram  # Add this to use telegram.helpers.escape_markdown
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
