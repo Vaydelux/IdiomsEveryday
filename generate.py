@@ -50,7 +50,7 @@ def load_quiz(filename=DEFAULT_FILENAME):
 
 # === Send Telegram Polls ===
 async def send_polls(bot, chat_id, quiz_data):
-    for q in quiz_data:
+    for i, q in enumerate(quiz_data, start=1):
         options = [q.get(k, "") for k in ("a", "b", "c", "d")]
         explanation = q.get("explanation", "")
     
