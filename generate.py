@@ -51,15 +51,15 @@ def load_quiz(filename=DEFAULT_FILENAME):
 # === Send Telegram Polls ===
 async def send_polls(bot, chat_id, quiz_data):
     for q in quiz_data:
-          options = [q.get(k, "") for k in ("a", "b", "c", "d")]
+        options = [q.get(k, "") for k in ("a", "b", "c", "d")]
         explanation = q.get("explanation", "")
-
+    
         # Determine correct option index (A=0, B=1, C=2, D=3)
         correct_letter = q.get("answer", "").strip().upper()
         letter_to_index = {"A": 0, "B": 1, "C": 2, "D": 3}
         correct_index = letter_to_index.get(correct_letter, 0)
-
-        
+    
+            
         # 🔢 Format question number and bold using MarkdownV2
         raw_question = f"{i}. {q.get('question', '')}"
         bold_question = f"*{telegram.helpers.escape_markdown(raw_question, version=2)}*"
