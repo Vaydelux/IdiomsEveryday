@@ -19,7 +19,7 @@ DEFAULT_FILENAME = "majorship.json"  # 🔁 change to your filename like "majors
 def build_explanation_prompt(questions: list) -> str:
     return (
         "For each question object in the JSON array below, add a field called 'explanation'. "
-        "The explanation must be **very concise**, with **100 characters or fewer**. "
+        "The explanation must be concise, with 100 characters or fewer. "
         "Only return valid JSON with the added 'explanation' fields. No extra text.\n\n"
         f"{json.dumps(questions, indent=2)}"
     )
@@ -61,13 +61,13 @@ async def send_polls(bot, chat_id, quiz_data):
         letter_to_index = {"A": 0, "B": 1, "C": 2, "D": 3}
         correct_index = letter_to_index.get(correct_letter, 0)
     
-        await bot.send_message(chat_id=chat_id, text=f"Question no. {i}")
+        msg = await bot.send_message(chat_id=chat_id, text=f"Question no. {i}")
+        await bot.pin_chat_message(chat_id=chat_id, message_id=msg.message_id, disable_notification=True)
             
         # 🔢 Format question number and bold using MarkdownV2
         raw_question = q.get('question', '')
         bold_question = f"*{telegram.helpers.escape_markdown(raw_question, version=2)}*"
-        print(bold_question)
-        print(explanation)
+
          # ✍️ Add explanation to show after wrong answers
         # Telegram will automatically show this to users who answer incorrectly
         await bot.send_poll(
