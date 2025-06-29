@@ -60,18 +60,18 @@ async def send_polls(bot, chat_id, quiz_data):
         letter_to_index = {"A": 0, "B": 1, "C": 2, "D": 3}
         correct_index = letter_to_index.get(correct_letter, 0)
     
+        await bot.send_message(chat_id=chat_id, text=f"Question no. {i}")
             
         # 🔢 Format question number and bold using MarkdownV2
-        raw_question = f"{i}. {q.get('question', '')}"
+        raw_question = q.get('question', '')
         bold_question = f"*{telegram.helpers.escape_markdown(raw_question, version=2)}*"
-
-        await bot.send_message(chat_id=chat_id, text=f"Question no. {i}")
-        
+        print(bold_question)
+        print(explanation)
          # ✍️ Add explanation to show after wrong answers
         # Telegram will automatically show this to users who answer incorrectly
         await bot.send_poll(
             chat_id=chat_id,
-            question=q.get("question", ""),
+            question=bold_question,
             options=options,
             type="quiz",  # 🎯 Enables quiz mode
             correct_option_id=correct_index,
