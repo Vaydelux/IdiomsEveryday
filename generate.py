@@ -63,8 +63,9 @@ async def send_polls(bot, chat_id, quiz_data):
 
         # 🔢 Message for question number
         msg = await bot.send_message(chat_id=chat_id, text=f"🔹 Question no. {i}")
+        await asyncio.sleep(3)
         await bot.pin_chat_message(chat_id=chat_id, message_id=msg.message_id, disable_notification=True)
-
+        await asyncio.sleep(3)
         # 🔠 Escape MarkdownV2 for poll question
         raw_question = q.get('question', '')
         bold_question = f"*{telegram.helpers.escape_markdown(raw_question, version=2)}*"
@@ -81,7 +82,7 @@ async def send_polls(bot, chat_id, quiz_data):
         )
 
         # ⏳ Delay to avoid flood control
-        await asyncio.sleep(1.2)
+        await asyncio.sleep(3)
 
 # === /start Command Handler ===
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
