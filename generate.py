@@ -19,7 +19,7 @@ DEFAULT_FILENAME = "majorship.json"  # 🔁 change to your filename like "majors
 def build_explanation_prompt(questions: list) -> str:
     return (
         "For each question object in the JSON array below, add a field called 'explanation'. "
-        "The explanation must be concise, with 100 characters or fewer. "
+        "The explanation must be concise, with 100 characters or few. "
         "Only return valid JSON with the added 'explanation' fields. No extra text.\n\n"
         f"{json.dumps(questions, indent=2)}"
     )
