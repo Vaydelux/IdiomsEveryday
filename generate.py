@@ -77,8 +77,7 @@ async def send_polls(bot, chat_id, quiz_data):
             type="quiz",
             correct_option_id=correct_index,
             explanation=explanation if explanation else None,
-            is_anonymous=False,
-            parse_mode="MarkdownV2"
+            is_anonymous=False
         )
 
         # ⏳ Delay to avoid flood control
@@ -104,6 +103,12 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # === Message fallback handler ===
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # In group: only respond if bot is mentioned
+    if message.chat.type in ["group", "supergroup"]:
+        bot_username = context.bot.username.lower()
+        if f"@{bot_username}" not in user_input.lower():
+            return
+    
     if update.message and update.message.text:
         await update.message.reply_text("Try sending /start to begin the quiz.")
 
