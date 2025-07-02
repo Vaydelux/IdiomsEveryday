@@ -32,7 +32,7 @@ def format_idiom(item: dict, index: int) -> str:
     for i, ex in enumerate(item.get("examples", []), 1):
         example_lines.append(f"   ➤ _Example {i}:_ {telegram.helpers.escape_markdown(ex, version=2)}")
 
-    return f"🔹 *Idiom {index}*\n{phrase}\n\n{interpretation}\n\n" + "\n".join(example_lines)
+    return f"🔹 *Idiom {index}*\n\n{phrase}\n\n{interpretation}\n\n" + "\n".join(example_lines)
 
 # === Send idioms with pinning & delay ===
 async def send_idioms(bot, chat_id, thread_id, idioms):
@@ -56,17 +56,19 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     thread_id = update.message.message_thread_id if update.message else None
 
-    await update.message.reply_text("⏳ Preparing 20 idioms...", message_thread_id=thread_id)
+    kwargs = {"message_thread_id": thread_id} if thread_id else {}
+    await update.message.reply_text("⏳ Preparing 20 idioms...", **kwargs)
 
     idioms = load_idioms()
     if not idioms:
-        await context.bot.send_message(chat_id=chat_id, text="❌ Failed to load idioms.", message_thread_id=thread_id)
+        await context.bot.send_message(chat_id=chat_id, text="❌ Failed to load idioms.", **kwargs)
         return
 
     selected = random.sample(idioms, min(20, len(idioms)))
     await send_idioms(context.bot, chat_id, thread_id, selected)
 
-    await context.bot.send_message(chat_id=chat_id, text="🎉 All idioms sent!", message_thread_id=thread_id)
+    await context.bot.send_message(chat_id=chat_id, text="🎉 All idioms sent!", **kwargs)
+
 
 # === Message fallback handler ===
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -82,11 +84,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if chat_type in ["group", "supergroup"] and f"@{BOT_USERNAME}" not in user_input:
         return
 
+    kwargs = {"message_thread_id": thread_id} if thread_id else {}
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text="Hi! Use /start to get idioms with examples 😊",
-        message_thread_id=thread_id
+        **kwargs
     )
+
 
 # === Main entry ===
 if __name__ == "__main__":
