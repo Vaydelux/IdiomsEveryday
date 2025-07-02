@@ -89,19 +89,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # === Main entry ===
-async def main():
-    global BOT_USERNAME
+if __name__ == "__main__":
+    print("🤖 Bot running...")
+
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # Set bot username once for later use
-    me = await app.bot.get_me()
-    BOT_USERNAME = me.username.lower()
+    async def startup():
+        global BOT_USERNAME
+        me = await app.bot.get_me()
+        BOT_USERNAME = me.username.lower()
+        print(f"✅ Bot username set to @{BOT_USERNAME}")
 
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    print(f"🤖 @{BOT_USERNAME} is running with topic support!")
-    await app.run_polling()
+    app.post_init = startup  # ✅ run once before polling starts
+    app.run_polling()
 
-if __name__ == "__main__":
-    asyncio.run(main())
