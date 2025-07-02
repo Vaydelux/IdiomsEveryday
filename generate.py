@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
-    async def startup():
+    async def startup(app):  # ✅ Accept the app instance
         global BOT_USERNAME
         me = await app.bot.get_me()
         BOT_USERNAME = me.username.lower()
@@ -103,6 +103,7 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    app.post_init = startup  # ✅ run once before polling starts
+    app.post_init = startup  # ✅ Correct usage
     app.run_polling()
+
 
