@@ -1,8 +1,8 @@
 import os
 import json
-import requests
-import asyncio  # ✅ Added for delay
-import telegram  # For telegram.helpers.escape_markdown
+import random
+import asyncio
+import telegram
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
@@ -10,113 +10,98 @@ from telegram.ext import (
 )
 
 # === CONFIG ===
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-MODEL_NAME = "gemini-1.5-flash"
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1/models/{MODEL_NAME}:generateContent?key={GEMINI_API_KEY}"
-DEFAULT_FILENAME = "majorship.json"
+DEFAULT_FILENAME = "idioms.json"
+BOT_USERNAME = None  # Will be set at startup
 
-# === Gemini Prompt Builder ===
-def build_explanation_prompt(questions: list) -> str:
-    return (
-        "For each question object in the JSON array below, add a field called 'explanation'. "
-        "The explanation must be concise, with 100 characters or fewer. "
-        "Only return valid JSON with the added 'explanation' fields. No extra text.\n\n"
-        f"{json.dumps(questions, indent=2)}"
-    )
-
-# === Ask Gemini ===
-async def ask_gemini(prompt: str):
-    headers = {"Content-Type": "application/json"}
-    context = [{"role": "user", "parts": [{"text": build_explanation_prompt(prompt)}]}]
-    payload = {"contents": context}
-
+# === Load idioms ===
+def load_idioms(filename=DEFAULT_FILENAME):
     try:
-        res = requests.post(GEMINI_URL, headers=headers, json=payload)
-        res.raise_for_status()
-        reply = res.json()["candidates"][0]["content"]["parts"][0]["text"]
-        start = reply.find("[")
-        end = reply.rfind("]") + 1
-        return json.loads(reply[start:end])
-    except Exception as e:
-        print("Gemini Error:", e)
-        return None
-
-# === Load quiz file ===
-def load_quiz(filename=DEFAULT_FILENAME):
-    try:
-        with open(filename.strip().lower(), "r", encoding="utf-8") as f:
+        with open(filename, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
-        print("❌ Failed to load quiz:", e)
+        print("❌ Failed to load idioms:", e)
         return []
 
-# === Send Telegram Polls with delay ===
-async def send_polls(bot, chat_id, quiz_data):
-    for i, q in enumerate(quiz_data, start=1):
-        options = [q.get(k, "") for k in ("a", "b", "c", "d")]
-        explanation = q.get("explanation", "")
+# === Format idiom with MarkdownV2 ===
+def format_idiom(item: dict, index: int) -> str:
+    phrase = f"*{telegram.helpers.escape_markdown(item['phrase'], version=2)}*"
+    interpretation = f"💡 *Meaning:* _{telegram.helpers.escape_markdown(item['interpretation'], version=2)}_"
 
-        correct_letter = q.get("answer", "").strip().upper()
-        letter_to_index = {"A": 0, "B": 1, "C": 2, "D": 3}
-        correct_index = letter_to_index.get(correct_letter, 0)
+    example_lines = ["🧾 *Examples:*"]
+    for i, ex in enumerate(item.get("examples", []), 1):
+        example_lines.append(f"   ➤ _Example {i}:_ {telegram.helpers.escape_markdown(ex, version=2)}")
 
-        # 🔢 Message for question number
-        msg = await bot.send_message(chat_id=chat_id, text=f"🔹 Question no. {i}")
-        await asyncio.sleep(3)
-        await bot.pin_chat_message(chat_id=chat_id, message_id=msg.message_id, disable_notification=True)
-        await asyncio.sleep(3)
-        # 🔠 Escape MarkdownV2 for poll question
-        raw_question = q.get('question', '')
-        bold_question = f"*{telegram.helpers.escape_markdown(raw_question, version=2)}*"
+    return f"🔹 *Idiom {index}*\n{phrase}\n\n{interpretation}\n\n" + "\n".join(example_lines)
 
-        # 📝 Send the quiz poll
-        await bot.send_poll(
+# === Send idioms with pinning & delay ===
+async def send_idioms(bot, chat_id, thread_id, idioms):
+    for i, idiom in enumerate(idioms, 1):
+        msg_text = format_idiom(idiom, i)
+
+        # Send message in the right topic/thread
+        msg = await bot.send_message(
             chat_id=chat_id,
-            question=bold_question,
-            options=options,
-            type="quiz",
-            correct_option_id=correct_index,
-            explanation=explanation if explanation else None,
-            is_anonymous=False
+            text=msg_text,
+            message_thread_id=thread_id,
+            parse_mode="MarkdownV2"
         )
 
-        # ⏳ Delay to avoid flood control
-        await asyncio.sleep(3)
+        await asyncio.sleep(1.5)
+        await bot.pin_chat_message(chat_id=chat_id, message_id=msg.message_id, disable_notification=True)
+        await asyncio.sleep(1.5)
 
-# === /start Command Handler ===
+# === /start Handler ===
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    await update.message.reply_text("⏳ Preparing your quiz...")
+    thread_id = update.message.message_thread_id if update.message else None
 
-    quiz_data = load_quiz()
-    if not quiz_data:
-        await update.message.reply_text("❌ Failed to load quiz.")
+    await update.message.reply_text("⏳ Preparing 20 idioms...", message_thread_id=thread_id)
+
+    idioms = load_idioms()
+    if not idioms:
+        await context.bot.send_message(chat_id=chat_id, text="❌ Failed to load idioms.", message_thread_id=thread_id)
         return
 
-    enriched = await ask_gemini(quiz_data)
-    if not enriched:
-        await update.message.reply_text("❌ Gemini failed to enrich the quiz.")
-        return
+    selected = random.sample(idioms, min(20, len(idioms)))
+    await send_idioms(context.bot, chat_id, thread_id, selected)
 
-    await send_polls(context.bot, chat_id, enriched)
-    await update.message.reply_text("🎉 Quiz sent!")
+    await context.bot.send_message(chat_id=chat_id, text="🎉 All idioms sent!", message_thread_id=thread_id)
 
 # === Message fallback handler ===
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # In group: only respond if bot is mentioned
-    if message.chat.type in ["group", "supergroup"]:
-        bot_username = context.bot.username.lower()
-        if f"@{bot_username}" not in user_input.lower():
-            return
-    
-    if update.message and update.message.text:
-        await update.message.reply_text("Try sending /start to begin the quiz.")
+    global BOT_USERNAME
+    if not update.message or not update.message.text:
+        return
 
-# === Main Entry ===
-if __name__ == "__main__":
-    print("🤖 Bot running... Send /start to trigger the quiz.")
+    chat_type = update.effective_chat.type
+    user_input = update.message.text.lower()
+    thread_id = update.message.message_thread_id
+
+    # Only respond in group/forum if bot is mentioned
+    if chat_type in ["group", "supergroup"] and f"@{BOT_USERNAME}" not in user_input:
+        return
+
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="Hi! Use /start to get idioms with examples 😊",
+        message_thread_id=thread_id
+    )
+
+# === Main entry ===
+async def main():
+    global BOT_USERNAME
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+
+    # Set bot username once for later use
+    me = await app.bot.get_me()
+    BOT_USERNAME = me.username.lower()
+
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.run_polling()
+
+    print(f"🤖 @{BOT_USERNAME} is running with topic support!")
+    await app.run_polling()
+
+if __name__ == "__main__":
+    asyncio.run(main())
